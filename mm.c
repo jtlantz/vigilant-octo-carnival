@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<time.h>
+
 #include "mm.h"
 
 
@@ -8,7 +9,17 @@
 // Task 1: Flush the cache so that we can do our measurement :)
 void flush_all_caches()
 {
-	// Your code goes here
+	//For now will just do this with a fixed block size
+	//Will work out later how to dynamically figure out cache size
+	char* temp;
+	//assuming "generouslly" a cache size of 16MB
+	int tempSize = 16*1024*1024; //16M * 1024KB / MB * 1024 Bytes / KB
+	temp = malloc(tempSize*sizeof(char));
+	for(int i=0; i<tempSize;i++){
+		//WEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+		temp[i] = 0;
+	}
+	free(temp);
 }
 
 void load_matrix_base()
@@ -29,6 +40,7 @@ void load_matrix_base()
 
 void free_all()
 {
+	printf("Attempting to free all matrix allocations\n");
 	free(huge_matrixA);
 	free(huge_matrixB);
 	free(huge_matrixC);
@@ -36,29 +48,56 @@ void free_all()
 
 void multiply_base()
 {
-	// Your code here
-	//
-	// Implement your baseline matrix multiply here.
-	
+    // int a,b,b2,c,i;
+	// for(a=0; a<SIZEX*SIZEY;a++)
+	// {
+	// 	for(b=0;b<SIZEX;b++)
+	// 	{
+	// 		b2=(b+(a*SIZEX))%(SIZEX*SIZEY);
+	// 		c=(a/SIZEX) + a;
+	// 		huge_matrixC[c] +=  huge_matrixA[a] * huge_matrixB[b2];
+
+	// 		printf("%ld, %ld, %ld :: ", a,b2,c);
+	// 	}
+	// 	printf("\n");
+	// }
+	int i,j,k,a,b,c;
+	for(i=0;i<SIZEX;i++)
+	{
+		for(j=0;j<SIZEY;j++)
+		{
+			for(k=0;k<SIZEX;k++)
+			{
+				a=i*SIZEX+j;
+				b=(j*SIZEX+k)%(SIZEX*SIZEY);
+				c=(i*SIZEX)+k;
+				huge_matrixC[c] +=  huge_matrixA[a] * huge_matrixB[b];
+				// printf("%ld, %ld, %ld :: ", a,b,c);
+			}
+		}
+	}
+	for(i=0;i<SIZEX*SIZEY;i++){
+		if(i%SIZEX==0&&i!=0) fprintf(fout, "\n");
+		fprintf(fout, "%ld ", huge_matrixC[i]);
+	}
+	fprintf(fout, "\n");
 }
 
 void compare_results()
 {
-	fout = fopen("./out.in","r");
 	long i;
 	long temp1, temp2;
 	for(i=0;i<((long)SIZEX*(long)SIZEY);i++)
 	{
 		fscanf(fout, "%ld", &temp1);
-		fscanf(fout, "%ld", &temp2);
+		fscanf(ftest, "%ld", &temp2);
+		printf("temp1 = %ld\ntemp2 = %ld\n", temp1, temp2);
 		if(temp1!=temp2)
 		{
-			printf("Wrong solution!");
+			printf("Wrong solution!\n");
 			exit(1);
 		}
 	}
-	fclose(fout);
-	fclose(ftest);
 }
 
 void write_results()
@@ -71,7 +110,9 @@ void write_results()
 
 void load_matrix()
 {
-	// Your code here
+	huge_matrixA = malloc(sizeof(long)*(long)SIZEX*(long)SIZEY);
+	huge_matrixB = malloc(sizeof(long)*(long)SIZEX*(long)SIZEY);
+	huge_matrixC = malloc(sizeof(long)*(long)SIZEX*(long)SIZEY);
 }
 
 
@@ -108,9 +149,6 @@ int main()
 	t = clock();
 	total_mul_base += ((double)t-(double)s) / CLOCKS_PER_SEC;
 	printf("[Baseline] Total time taken during the multiply = %f seconds\n", total_mul_base);
-	fclose(fin1);
-	fclose(fin2);
-	fclose(fout);
 	free_all();
 
 	flush_all_caches();
@@ -130,6 +168,7 @@ int main()
 	fclose(fin1);
 	fclose(fin2);
 	fclose(fout);
+	fclose(ftest);
 	free_all();
 	compare_results();
 

@@ -8,7 +8,7 @@ size = sys.argv[1]
 
 f1 = open("input1.in","w")
 f2 = open("input2.in","w")
-f3 = open("reference.in","w")
+f3 = open("reference.in","w", encoding="UTF-8")
 
 matrix1 = []
 matrix2 = []
