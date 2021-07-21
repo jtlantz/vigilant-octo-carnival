@@ -94,23 +94,53 @@ void write_results()
 void load_matrix()
 {
 	long i;
-	printf("Attempting to allocate memory for matricies\n");
 	huge_matrixA = malloc(sizeof(long)*(long)SIZEX*(long)SIZEY);
 	huge_matrixB = malloc(sizeof(long)*(long)SIZEX*(long)SIZEY);
 	huge_matrixC = malloc(sizeof(long)*(long)SIZEX*(long)SIZEY);
 	
-	printf("Memory alloc successful, trying to write to matricies\n");
 
+	pthread_t th_load_matrix[3];
 	rewind(fin1);
 	rewind(fin2);
+	
+	pthread_create(&th_load_matrix[0], NULL, &load_matrixA, NULL);
+	pthread_create(&th_load_matrix[1], NULL, &load_matrixB, NULL);
+	pthread_create(&th_load_matrix[2], NULL, &load_matrixC, NULL);
 
+	pthread_join(th_load_matrix[0], NULL);
+	pthread_join(th_load_matrix[1], NULL);
+	pthread_join(th_load_matrix[2], NULL);
+}
+
+void load_matrixA()
+{	
+	huge_matrixA = malloc(sizeof(long)*(long)SIZEX*(long)SIZEY);
+	long i;
 	for(i=0;i<((long)SIZEX*(long)SIZEY);i++)
 	{
 		fscanf(fin1,"%ld", (huge_matrixA+i)); 		
+	}
+	pthread_exit(0);
+}
+
+void load_matrixB()
+{	
+	long i;
+	for(i=0;i<((long)SIZEX*(long)SIZEY);i++)
+	{
 		fscanf(fin2,"%ld", (huge_matrixB+i)); 		
+	}
+	pthread_exit(0);
+}
+
+void load_matrixC()
+{	
+	long i;
+	for(i=0;i<((long)SIZEX*(long)SIZEY);i++)
+	{
 		huge_matrixC[i] = 0;		
 	}
-	printf("Loaded matrix successfully\n");
+	pthread_exit(0);
 }
 
 int find_loc(int row, int col) 
@@ -118,44 +148,26 @@ int find_loc(int row, int col)
 	return row*SIZEY + col;
 }
 
-
-
-void multiply(int blockSize)
+void multiply(Task task)
 {
-	int row, col , dot, blockRow, blockCol;
-	for(row = 0; row < SIZEY; row+=blockSize){
-		for(col=0; col < SIZEX; col+=blockSize){
+	int row, col, blockRow, blockCol, dot;
+	row = task.a;
+	col = task.b;
 
-			for(blockRow = row; blockRow < row + blockSize; blockRow++){
-				for(blockCol = col; blockCol < col + blockSize; blockCol++){
-
-					for(dot=0; dot < SIZEX; dot++) {
-						huge_matrixC[find_loc(blockRow,blockCol)] += (
-							huge_matrixA[find_loc(blockRow,dot)] * huge_matrixB[find_loc(dot,blockCol)]
-						);
-					}
-				}
+	for(blockRow = row; blockRow < row+BLOCKSIZE; blockRow++){
+		for(blockCol = col; blockCol < col+BLOCKSIZE; blockCol++){
+			for(dot = 0; dot < SIZEX; dot++){
+				//we can gaurentee that no other thread will occupy the same (blockRow, blockCol) at the same time so no need to lock this variable;
+				huge_matrixC[find_loc(blockRow,blockCol)] += (
+					huge_matrixA[find_loc(blockRow,dot)] * huge_matrixB[find_loc(dot,blockCol)]
+				);
 			}
 		}
 	}
-}
+}	
 
-int main()
+void baseline()
 {
-	
-	clock_t s,t;
-	double total_in_base = 0.0;
-	double total_in_your = 0.0;
-	double total_mul_base = 0.0;
-	double total_mul_your = 0.0;
-	fin1 = fopen("./input1.in","r");
-	fin2 = fopen("./input2.in","r");
-	fout = fopen("./out.in","w");
-	ftest = fopen("./reference.in","r");
-	
-
-	flush_all_caches();
-
 	s = clock();
 	load_matrix_base();
 
@@ -168,7 +180,43 @@ int main()
 	t = clock();
 	total_mul_base += ((double)t-(double)s) / CLOCKS_PER_SEC;
 	printf("[Baseline] Total time taken during the multiply = %f seconds\n", total_mul_base);
-	free_all();
+}
+
+void* startThread(void* args)
+{
+	while(1) {
+		usleep(10000);
+		Task task;
+		pthread_mutex_lock(&mutexQueue);
+		if(taskCount>0){
+			task = task_pool[0];
+			int i;
+			for(i = 0 ; i<taskCount - 1; i++){
+				task_pool[i] = task_pool[i+1];
+			}
+			taskCount--;
+		}
+		pthread_mutex_unlock(&mutexQueue);
+		multiply(task);
+		if(taskCount==0) return;
+	}
+}
+
+void work_assignment()
+{
+	int rows, cols;
+	for(rows = 0; rows < SIZEY; rows+=BLOCKSIZE){
+		for(cols = 0; cols < SIZEX; cols+=BLOCKSIZE){
+			task_pool[taskCount].a = rows;
+			task_pool[taskCount].b = cols;
+			taskCount++;
+		}
+	}
+	return;
+}
+
+void improved_matrix_multiply()
+{
 	flush_all_caches();
 
 	s = clock();
@@ -179,13 +227,49 @@ int main()
 	printf("Total time taken during the load = %f seconds\n", total_in_your);
 
 	
-	int blockSize = 25;
+	int blockSize = BLOCKSIZE;
 	printf("Trying to multiply using blockSize of %d\n", blockSize);
+	int thread_count = 16; //create a thread pool with this many threads
+	taskCount = 0; //Set our current task count to 0
+
+	task_pool = malloc((SIZEX*SIZEY/blockSize)*sizeof(Task));
+	pthread_t th_pool[thread_count];
+	pthread_mutex_init(&mutexQueue, NULL);
+
 	s = clock();
-	multiply(blockSize);
+	int i;
+	for(i=0; i<thread_count; i++){
+		if(pthread_create(&th_pool[i], NULL, &startThread, NULL) != 0) {
+			perror("Failed to create Thread");
+		}
+	}
+
+	printf("Trying to submit tasks\n");
+	work_assignment();
+
+	printf("work assigned, trying to loop threads now\n");
+
+	for(i=0; i<thread_count; i++){
+		if(pthread_join(th_pool[i], NULL) != 0) perror("Failed to create Thread");
+	}
 	t = clock();
+
+	pthread_mutex_destroy(&mutexQueue);
 	total_mul_your = ((double)t-(double)s) / CLOCKS_PER_SEC;
 	printf("Total time taken during the multiply = %f seconds\n", total_mul_your);
+}
+
+int main()
+{
+	
+	fin1 = fopen("./input1.in","r");
+	fin2 = fopen("./input2.in","r");
+	fout = fopen("./out.in","w");
+	ftest = fopen("./reference.in","r");
+
+	baseline();
+	free_all();
+	improved_matrix_multiply();
 
 	printf("Writing results\n");
 	write_results();
