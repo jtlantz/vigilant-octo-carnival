@@ -274,8 +274,8 @@ int main()
 	fout = fopen("./out.in","w");
 	ftest = fopen("./reference.in","r");
 
-	// baseline();
-	// free_all();
+	baseline();
+	free_all();
 	improved_matrix_multiply();
 
 	printf("Writing results\n");
