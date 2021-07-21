@@ -236,7 +236,7 @@ void improved_matrix_multiply()
 	pthread_t th_pool[thread_count];
 	pthread_mutex_init(&mutexQueue, NULL);
 
-	s = clock();
+	
 	int i;
 	for(i=0; i<thread_count; i++){
 		if(pthread_create(&th_pool[i], NULL, &startThread, NULL) != 0) {
@@ -244,6 +244,11 @@ void improved_matrix_multiply()
 		}
 	}
 
+	struct timespec t1, t2;
+	double elapsedTime;
+
+	clock_gettime(CLOCK_MONOTONIC, &t1);
+	
 	printf("Trying to submit tasks\n");
 	work_assignment();
 
@@ -252,11 +257,13 @@ void improved_matrix_multiply()
 	for(i=0; i<thread_count; i++){
 		if(pthread_join(th_pool[i], NULL) != 0) perror("Failed to create Thread");
 	}
-	t = clock();
+	clock_gettime(CLOCK_MONOTONIC, &t2);
 
 	pthread_mutex_destroy(&mutexQueue);
-	total_mul_your = ((double)t-(double)s) / CLOCKS_PER_SEC;
-	printf("Total time taken during the multiply = %f seconds\n", total_mul_your);
+	elapsedTime = (t2.tv_sec - t1.tv_sec);
+	elapsedTime += (t2.tv_nsec - t1.tv_nsec) / 1000000000.0;
+
+	printf("Total time taken during the multiply = %.3f seconds\n", elapsedTime);
 }
 
 int main()
@@ -267,8 +274,8 @@ int main()
 	fout = fopen("./out.in","w");
 	ftest = fopen("./reference.in","r");
 
-	baseline();
-	free_all();
+	// baseline();
+	// free_all();
 	improved_matrix_multiply();
 
 	printf("Writing results\n");
