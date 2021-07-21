@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<time.h>
+#include<pthread.h>
 
 #include "mm.h"
 
@@ -122,10 +123,6 @@ int find_loc(int row, int col)
 void multiply(int blockSize)
 {
 	int row, col , dot, blockRow, blockCol;
-	double total_mul_your = 0.0;
-
-
-	printf("Trying to multiply using blockSize of %d\n", blockSize);
 	for(row = 0; row < SIZEY; row+=blockSize){
 		for(col=0; col < SIZEX; col+=blockSize){
 
@@ -171,7 +168,6 @@ int main()
 	t = clock();
 	total_mul_base += ((double)t-(double)s) / CLOCKS_PER_SEC;
 	printf("[Baseline] Total time taken during the multiply = %f seconds\n", total_mul_base);
-	// print_matrixC();
 	free_all();
 	flush_all_caches();
 
@@ -179,19 +175,21 @@ int main()
 	load_matrix();
 	t = clock();
 
-	// print_matrixA(); //make sure it's correct
-	// print_matrixB(); //make sure it's also correct
-	// print_matrixC(); //make sure its empty
-
 	total_in_your += ((double)t-(double)s) / CLOCKS_PER_SEC;
 	printf("Total time taken during the load = %f seconds\n", total_in_your);
 
+	
+	int blockSize = 25;
+	printf("Trying to multiply using blockSize of %d\n", blockSize);
 	s = clock();
-	multiply();
+	multiply(blockSize);
 	t = clock();
-	total_mul_your += ((double)t-(double)s) / CLOCKS_PER_SEC;
+	total_mul_your = ((double)t-(double)s) / CLOCKS_PER_SEC;
 	printf("Total time taken during the multiply = %f seconds\n", total_mul_your);
+
+	printf("Writing results\n");
 	write_results();
+	printf("Wrote results\n");
 
 	fclose(fin1);
 	fclose(fin2);
