@@ -1,5 +1,5 @@
-#define SIZEX 1000
-#define SIZEY 1000
+#define SIZEX 10
+#define SIZEY 10
 
 long * huge_matrixA;
 long * huge_matrixB;
@@ -21,4 +21,4 @@ void multiply();
 // Any additional variables needed go here
 
 // Any helper functions go here
-
+int find_loc(int x, int y);

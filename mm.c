@@ -48,39 +48,23 @@ void free_all()
 
 void multiply_base()
 {
-    // int a,b,b2,c,i;
-	// for(a=0; a<SIZEX*SIZEY;a++)
-	// {
-	// 	for(b=0;b<SIZEX;b++)
-	// 	{
-	// 		b2=(b+(a*SIZEX))%(SIZEX*SIZEY);
-	// 		c=(a/SIZEX) + a;
-	// 		huge_matrixC[c] +=  huge_matrixA[a] * huge_matrixB[b2];
-
-	// 		printf("%ld, %ld, %ld :: ", a,b2,c);
-	// 	}
-	// 	printf("\n");
-	// }
-	int i,j,k,a,b,c;
-	for(i=0;i<SIZEX;i++)
-	{
-		for(j=0;j<SIZEY;j++)
-		{
-			for(k=0;k<SIZEX;k++)
-			{
-				a=i*SIZEX+j;
-				b=(j*SIZEX+k)%(SIZEX*SIZEY);
-				c=(i*SIZEX)+k;
-				huge_matrixC[c] +=  huge_matrixA[a] * huge_matrixB[b];
-				// printf("%ld, %ld, %ld :: ", a,b,c);
+	int a,b,c;
+	for(a = 0; a < SIZEX; a++){
+		for(b=0; b < SIZEY; b++){
+			for(c=0; c < SIZEX; c++) {
+				huge_matrixC[find_loc(a,b)] += (
+					huge_matrixA[find_loc(a,c)] * huge_matrixB[find_loc(c,b)]
+				);
 			}
 		}
 	}
-	for(i=0;i<SIZEX*SIZEY;i++){
-		if(i%SIZEX==0&&i!=0) fprintf(fout, "\n");
-		fprintf(fout, "%ld ", huge_matrixC[i]);
+
+	for(int row=0;row<SIZEY;row++){
+		for(int col=0;col<SIZEX;col++){
+			printf("%ld ", huge_matrixC[find_loc(row,col)]);
+		}
+		printf("\n");
 	}
-	fprintf(fout, "\n");
 }
 
 void compare_results()
@@ -102,10 +86,14 @@ void compare_results()
 
 void write_results()
 {
-	// Your code here
-	//
-	// Basically, make sure the result is written on fout
-	// Each line represent value in the X-dimension of your matrix
+	int i, j;
+	for(i = 0; i<SIZEX;i++) 
+	{
+		for(j=0; j<SIZEY;j++){
+			fscanf(fout, "%ld", huge_matrixC[find_loc(i,j)]);
+		}
+		fscanf(fout, "\n");
+	}
 }
 
 void load_matrix()
@@ -113,13 +101,36 @@ void load_matrix()
 	huge_matrixA = malloc(sizeof(long)*(long)SIZEX*(long)SIZEY);
 	huge_matrixB = malloc(sizeof(long)*(long)SIZEX*(long)SIZEY);
 	huge_matrixC = malloc(sizeof(long)*(long)SIZEX*(long)SIZEY);
+	
+	int i;
+	for(i=0;i<((long)SIZEX*(long)SIZEY);i++) {
+		fscanf(fin1,"%ld", (huge_matrixA+i)); 		
+		fscanf(fin2,"%ld", (huge_matrixB+i)); 		
+		huge_matrixC[i] = 0;		
+	}
+}
+
+int find_loc(int row, int col) 
+{
+	return row*SIZEY + col;
 }
 
 
 
 void multiply()
 {
-	// Your code here
+	// int x,y,z, xx, yy;
+	// long result;
+	// int blocksize = 32;
+	// for(x=0; x<SIZEY; x+=blocksize){
+	// 	for(y=0; y<SIZEY; y+=blocksize){
+	// 		result = 0;
+	// 		for(int z=0; z<SIZEX; z++){
+	// 			result += huge_matrixA[find_loc(z, x)] * huge_matrixA[find_loc(y, z)];
+	// 		}
+	// 		huge_matrixC[find_loc(x,y)] = result;
+	// 	}
+	// }
 }
 
 int main()
