@@ -44,6 +44,7 @@ void free_all()
 	free(huge_matrixA);
 	free(huge_matrixB);
 	free(huge_matrixC);
+	printf("Freeing matricies successful!\n");
 }
 
 void multiply_base()
@@ -57,13 +58,6 @@ void multiply_base()
 				);
 			}
 		}
-	}
-
-	for(int row=0;row<SIZEY;row++){
-		for(int col=0;col<SIZEX;col++){
-			printf("%ld ", huge_matrixC[find_loc(row,col)]);
-		}
-		printf("\n");
 	}
 }
 
@@ -90,24 +84,32 @@ void write_results()
 	for(i = 0; i<SIZEX;i++) 
 	{
 		for(j=0; j<SIZEY;j++){
-			fscanf(fout, "%ld", huge_matrixC[find_loc(i,j)]);
+			fprintf(fout, "%ld ", huge_matrixC[find_loc(i,j)]);
 		}
-		fscanf(fout, "\n");
+		fprintf(fout, "\n");
 	}
 }
 
 void load_matrix()
 {
+	long i;
+	printf("Attempting to allocate memory for matricies\n");
 	huge_matrixA = malloc(sizeof(long)*(long)SIZEX*(long)SIZEY);
 	huge_matrixB = malloc(sizeof(long)*(long)SIZEX*(long)SIZEY);
 	huge_matrixC = malloc(sizeof(long)*(long)SIZEX*(long)SIZEY);
 	
-	int i;
-	for(i=0;i<((long)SIZEX*(long)SIZEY);i++) {
+	printf("Memory alloc successful, trying to write to matricies\n");
+
+	rewind(fin1);
+	rewind(fin2);
+
+	for(i=0;i<((long)SIZEX*(long)SIZEY);i++)
+	{
 		fscanf(fin1,"%ld", (huge_matrixA+i)); 		
 		fscanf(fin2,"%ld", (huge_matrixB+i)); 		
 		huge_matrixC[i] = 0;		
 	}
+	printf("Loaded matrix successfully\n");
 }
 
 int find_loc(int row, int col) 
@@ -117,20 +119,28 @@ int find_loc(int row, int col)
 
 
 
-void multiply()
+void multiply(int blockSize)
 {
-	// int x,y,z, xx, yy;
-	// long result;
-	// int blocksize = 32;
-	// for(x=0; x<SIZEY; x+=blocksize){
-	// 	for(y=0; y<SIZEY; y+=blocksize){
-	// 		result = 0;
-	// 		for(int z=0; z<SIZEX; z++){
-	// 			result += huge_matrixA[find_loc(z, x)] * huge_matrixA[find_loc(y, z)];
-	// 		}
-	// 		huge_matrixC[find_loc(x,y)] = result;
-	// 	}
-	// }
+	int row, col , dot, blockRow, blockCol;
+	double total_mul_your = 0.0;
+
+
+	printf("Trying to multiply using blockSize of %d\n", blockSize);
+	for(row = 0; row < SIZEY; row+=blockSize){
+		for(col=0; col < SIZEX; col+=blockSize){
+
+			for(blockRow = row; blockRow < row + blockSize; blockRow++){
+				for(blockCol = col; blockCol < col + blockSize; blockCol++){
+
+					for(dot=0; dot < SIZEX; dot++) {
+						huge_matrixC[find_loc(blockRow,blockCol)] += (
+							huge_matrixA[find_loc(blockRow,dot)] * huge_matrixB[find_loc(dot,blockCol)]
+						);
+					}
+				}
+			}
+		}
+	}
 }
 
 int main()
@@ -151,6 +161,7 @@ int main()
 
 	s = clock();
 	load_matrix_base();
+
 	t = clock();
 	total_in_base += ((double)t-(double)s) / CLOCKS_PER_SEC;
 	printf("[Baseline] Total time taken during the load = %f seconds\n", total_in_base);
@@ -160,13 +171,18 @@ int main()
 	t = clock();
 	total_mul_base += ((double)t-(double)s) / CLOCKS_PER_SEC;
 	printf("[Baseline] Total time taken during the multiply = %f seconds\n", total_mul_base);
+	// print_matrixC();
 	free_all();
-
 	flush_all_caches();
 
 	s = clock();
 	load_matrix();
 	t = clock();
+
+	// print_matrixA(); //make sure it's correct
+	// print_matrixB(); //make sure it's also correct
+	// print_matrixC(); //make sure its empty
+
 	total_in_your += ((double)t-(double)s) / CLOCKS_PER_SEC;
 	printf("Total time taken during the load = %f seconds\n", total_in_your);
 
@@ -176,6 +192,7 @@ int main()
 	total_mul_your += ((double)t-(double)s) / CLOCKS_PER_SEC;
 	printf("Total time taken during the multiply = %f seconds\n", total_mul_your);
 	write_results();
+
 	fclose(fin1);
 	fclose(fin2);
 	fclose(fout);
