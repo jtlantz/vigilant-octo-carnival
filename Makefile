@@ -11,7 +11,7 @@ CC = gcc
 #compiler flags
 CFLAGS = -O -Wall -pg -m64 -pthread 
 #dependencies
-LIBFLAGS := -pthread -lpthread
+LIBFLAGS := -pthread -lpthread -pg
 
 default: all
 all: mm
