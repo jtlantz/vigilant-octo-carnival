@@ -9,7 +9,7 @@ BIN := mm
 #C compiler
 CC = gcc
 #compiler flags
-CFLAGS = -O -Wall -m64 -pthread
+CFLAGS = -O -Wall -pg -m64 -pthread 
 #dependencies
 LIBFLAGS := -pthread -lpthread
 

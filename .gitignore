@@ -1,3 +1,5 @@
 *.in
 *.o
 mm
+analyze.txt
+gmon.out
