@@ -12,10 +12,10 @@ int main(int argc, char argv[])
 	in2 = fopen("./input2.in","w");
     int i, j;
 
-    for(i = 0; i < 20000;i++){
-        for(j = 0; j<20000; j++){
-            fprintf(in1, "%ld ", random());
-            fprintf(in2, "%ld ", random());
+    for(i = 0; i < 10000;i++){
+        for(j = 0; j<10000; j++){
+            fprintf(in1, "%ld ", random()%5+1);
+            fprintf(in2, "%ld ", random()%5+1);
         }
         fprintf(in1, "\n");
         fprintf(in2, "\n");

@@ -25,6 +25,8 @@ void flush_all_caches()
 
 void load_matrix_base()
 {
+	fin1 = fopen("./input1.in","r");
+	fin2 = fopen("./input2.in","r");
 	long i;
 	huge_matrixA = malloc(sizeof(long)*(long)SIZEX*(long)SIZEY);
 	huge_matrixB = malloc(sizeof(long)*(long)SIZEX*(long)SIZEY);
@@ -51,13 +53,16 @@ void free_all()
 void multiply_base()
 {
 	int a,b,c;
+	long sum;
 	for(a = 0; a < SIZEX; a++){
 		for(b=0; b < SIZEY; b++){
+			sum=0;
 			for(c=0; c < SIZEX; c++) {
-				huge_matrixC[find_loc(a,b)] += (
+				sum += (
 					huge_matrixA[find_loc(a,c)] * huge_matrixB[find_loc(c,b)]
 				);
 			}
+			huge_matrixC[find_loc(a,b)] = sum;
 		}
 	}
 }
@@ -66,21 +71,24 @@ void compare_results()
 {
 	long i;
 	long temp1, temp2;
+	fout = fopen("./out.in","r");
+	ftest = fopen("./reference.in","r");
 	for(i=0;i<((long)SIZEX*(long)SIZEY);i++)
 	{
 		fscanf(fout, "%ld", &temp1);
 		fscanf(ftest, "%ld", &temp2);
-		printf("temp1 = %ld\ntemp2 = %ld\n", temp1, temp2);
-		if(temp1!=temp2)
-		{
+		// printf("temp1 = %ld\ntemp2 = %ld\n", temp1, temp2);
+		if(temp1!=temp2) {
 			printf("Wrong solution!\n");
-			exit(1);
+			return;
 		}
 	}
+	printf("Correct Solution!\n");
 }
 
 void write_results()
 {
+	fout = fopen("./out.in","w");
 	int i, j;
 	for(i = 0; i<SIZEX;i++) 
 	{
@@ -89,6 +97,7 @@ void write_results()
 		}
 		fprintf(fout, "\n");
 	}
+	fclose(fout);
 }
 
 void load_matrix()
@@ -151,17 +160,20 @@ int find_loc(int row, int col)
 void multiply(Task task)
 {
 	int row, col, blockRow, blockCol, dot;
+	long sum;
 	row = task.a;
 	col = task.b;
 
 	for(blockRow = row; blockRow < row+BLOCKSIZE; blockRow++){
 		for(blockCol = col; blockCol < col+BLOCKSIZE; blockCol++){
+			sum = 0;
 			for(dot = 0; dot < SIZEX; dot++){
 				//we can gaurentee that no other thread will occupy the same (blockRow, blockCol) at the same time so no need to lock this variable;
-				huge_matrixC[find_loc(blockRow,blockCol)] += (
+				sum += (
 					huge_matrixA[find_loc(blockRow,dot)] * huge_matrixB[find_loc(dot,blockCol)]
 				);
 			}
+			huge_matrixC[find_loc(blockRow,blockCol)] = sum;
 		}
 	}
 }	
@@ -184,8 +196,8 @@ void baseline()
 
 void* startThread(void* args)
 {
+	usleep(10000);
 	while(1) {
-		usleep(10000);
 		Task task;
 		pthread_mutex_lock(&mutexQueue);
 		if(taskCount>0){
@@ -218,14 +230,16 @@ void work_assignment()
 void improved_matrix_multiply()
 {
 	flush_all_caches();
+	struct timespec t1, t2;
+	double elapsedTime;
 
-	s = clock();
+	clock_gettime(CLOCK_MONOTONIC, &t1);
 	load_matrix();
-	t = clock();
+	clock_gettime(CLOCK_MONOTONIC, &t2);
+	elapsedTime = (t2.tv_sec - t1.tv_sec);
+	elapsedTime += (t2.tv_nsec - t1.tv_nsec) / 1000000000.0;
 
-	total_in_your += ((double)t-(double)s) / CLOCKS_PER_SEC;
-	printf("Total time taken during the load = %f seconds\n", total_in_your);
-
+	printf("[Multithreaded]Total time taken during to Load = %.3f seconds\n", elapsedTime);
 	
 	int blockSize = BLOCKSIZE;
 	printf("Trying to multiply using blockSize of %d\n", blockSize);
@@ -244,8 +258,8 @@ void improved_matrix_multiply()
 		}
 	}
 
-	struct timespec t1, t2;
-	double elapsedTime;
+	
+
 
 	clock_gettime(CLOCK_MONOTONIC, &t1);
 	
@@ -263,17 +277,11 @@ void improved_matrix_multiply()
 	elapsedTime = (t2.tv_sec - t1.tv_sec);
 	elapsedTime += (t2.tv_nsec - t1.tv_nsec) / 1000000000.0;
 
-	printf("Total time taken during the multiply = %.3f seconds\n", elapsedTime);
+	printf("[Multithreaded]Total time taken during the multiply = %.3f seconds\n", elapsedTime);
 }
 
 int main()
 {
-	
-	fin1 = fopen("./input1.in","r");
-	fin2 = fopen("./input2.in","r");
-	fout = fopen("./out.in","w");
-	ftest = fopen("./reference.in","r");
-
 	baseline();
 	free_all();
 	improved_matrix_multiply();
@@ -284,8 +292,6 @@ int main()
 
 	fclose(fin1);
 	fclose(fin2);
-	fclose(fout);
-	fclose(ftest);
 	free_all();
 	compare_results();
 
