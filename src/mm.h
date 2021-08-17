@@ -1,5 +1,5 @@
-#define SIZEX 2000
-#define SIZEY 2000
+#define SIZEX 10000
+#define SIZEY 10000
 #define BLOCKSIZE 100
 
 typedef struct Task{
@@ -40,3 +40,7 @@ int find_loc(int x, int y);
 void load_matrixA();
 void load_matrixB();
 void load_matrixC();
+void multiply_translated(Task task);
+void load_matrixB_translated();
+void translated_matrix_multiply();
+void* startThread_translated(void* args);
